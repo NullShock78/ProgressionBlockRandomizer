@@ -24,9 +24,19 @@ namespace ProgressionBlockRandomizer
 
         private static Dictionary<ushort, ushort> swapDict = new Dictionary<ushort, ushort>();
 
+        //For future use
         private static Dictionary<ushort, ushort> solidDict = new Dictionary<ushort, ushort>();
         private static Dictionary<ushort, ushort> nonSolidDict = new Dictionary<ushort, ushort>();
         private static Dictionary<ushort, ushort> wallDict = new Dictionary<ushort, ushort>();
+
+        private static Random seedRand = new Random();
+        private static Random rand = new Random();
+        static bool useSeedForRand = false;
+        static int randSeed = 0;
+
+        static bool SolidToNonsolid = false;
+        static bool PreventDungeonAndTempleRandomize = true;
+        static bool PreventDungeonAndTempleSpikes = true;
 
         //private static bool[] solidOverride;
         //private static bool[] nonSolid;
@@ -57,7 +67,7 @@ namespace ProgressionBlockRandomizer
             TileID.LivingUltrabrightFire,
             TileID.MetalBars,
         };
-        static HashSet<ushort> skipFraming = new HashSet<ushort>();
+
         //Todo: remove unnecessary tile ids
         static HashSet<ushort> forceSkip = new HashSet<ushort>()
         {
@@ -84,16 +94,42 @@ namespace ProgressionBlockRandomizer
             TileID.PixelBox,
             TileID.MagicalIceBlock,
 
+            //Basically platforms and it would be rude
             TileID.PlanterBox,
+
+            TileID.ClayPot,
             TileID.WoodenBeam,
             TileID.VineFlowers,
-            TileID.VineRope,
             TileID.Vines,
             TileID.Rope,
+            TileID.VineRope,
+            TileID.WebRope,
             TileID.SilkRope,
             TileID.GeyserTrap,
-            TileID.Traps
+            TileID.Traps,
+            TileID.Banners,
+            TileID.Chain,
+            TileID.CorruptPlants,
+            TileID.PlantDetritus,
+            TileID.PlanteraBulb,
+            TileID.Plants,
+            TileID.Plants2,
+            TileID.PressurePlates,
+            TileID.Saplings,
+            TileID.CrimsonVines,
+            TileID.HallowedVines,
+            TileID.JungleVines,
+            TileID.JunglePlants,
+            TileID.JunglePlants2,
 
+            TileID.Count, //Mannequin
+            471, //Weapon rack
+            TileID.Torches,
+            TileID.Trees,
+            TileID.MushroomTrees,
+            TileID.Pots,
+            TileID.Books,
+            TileID.PiggyBank,
         };
 
 
@@ -103,21 +139,77 @@ namespace ProgressionBlockRandomizer
             instance = this;
             BossesDefeatedCheck();
         }
-
         public static bool StartRandomizing()
         {
-            if (!instance.updating)
+            return StartRandomizing(Config.Instance.SolidToNonsolid, Config.Instance.PreventDungeonAndTempleRandomize, Config.Instance.PreventDungeonAndTempleSpikes, false);
+        }
+
+
+        public static bool StartRandomizing(bool solidToNonSolid, bool preventDungeonAndTempleRandomize, bool preventDungeonAndTempleSpikes, bool useSeed = false, int seed = 0)
+        {
+            if (!instance.updating && !instance.startUpdate)
             {
+                SolidToNonsolid = solidToNonSolid;
+                PreventDungeonAndTempleRandomize = preventDungeonAndTempleRandomize;
+                PreventDungeonAndTempleSpikes = preventDungeonAndTempleSpikes;
+
+                //Generate seed
+                if (useSeed)
+                {
+                    useSeedForRand = useSeed;
+                    randSeed = seed;
+                    rand = new Random(seed);
+                }
+                else
+                {
+                    //BitConverter with a byte array so max int value is possible, rand.Next()'s max is exclusive
+                    byte[] bytes = new byte[4];
+                    seedRand.NextBytes(bytes);
+                    randSeed = BitConverter.ToInt32(bytes, 0);
+
+                    rand = new Random(randSeed);
+                }
+
                 instance.startUpdate = true;
                 return true;
             }
-            return false;
+            else
+            {
+                if (Main.netMode == NetmodeID.SinglePlayer)
+                {
+                    Main.NewText($"World is already randomizing, please wait", 50, 255, 130, false);
+                }
+                else if(Main.netMode == NetmodeID.Server)
+                {
+                    NetMessage.BroadcastChatMessage(NetworkText.FromLiteral($"World is already randomizing, please wait"), new Color(50, 255, 130), -1);
+                }
+                return false;
+            }
+
         }
 
         private static void EndRandomizing()
         {
             instance.updating = false;
         }
+
+        public static void ShowSeed()
+        {
+            char ToFlag(bool b)
+            {
+                return b ? '1' : '0';
+            }
+            string seedString = $"Seed: {randSeed}:{ToFlag(SolidToNonsolid)}{ToFlag(PreventDungeonAndTempleRandomize)}{ToFlag(PreventDungeonAndTempleSpikes)}";
+            if (Main.netMode == NetmodeID.SinglePlayer)
+            {
+                Main.NewText(seedString, 255, 255, 50, false);
+            }
+            else if (Main.netMode == NetmodeID.Server)
+            {
+                NetMessage.BroadcastChatMessage(NetworkText.FromLiteral(seedString), new Color(255, 255, 50), -1);
+            }
+        }
+
 
         //TODO: config for bosses
         private bool BossesDefeatedCheck()
@@ -178,6 +270,7 @@ namespace ProgressionBlockRandomizer
         //TODO: Wall randomization
         private static void RandomizeDictionary()
         {
+
             swapDict.Clear();
             solidDict.Clear();
             nonSolidDict.Clear();
@@ -186,12 +279,12 @@ namespace ProgressionBlockRandomizer
             List<ushort> tilesA = new List<ushort>();
             HashSet<ushort> skipHash = new HashSet<ushort>();
 
-            if (!Config.Instance.FullRandom && !Config.Instance.SolidToNonsolid)
+            if (!Config.Instance.FullRandom && !SolidToNonsolid)
             {
                 foreach (var t in nonSolid) skipHash.Add(t);
             }
 
-            if(Config.Instance.SolidToNonsolid || Config.Instance.FullRandom)
+            if(SolidToNonsolid || Config.Instance.FullRandom)
             {
                 tilesA.Add(TileID.Bubble);
                 tilesA.Add(TileID.MetalBars);
@@ -201,13 +294,33 @@ namespace ProgressionBlockRandomizer
                 tilesA.Add(TileID.LivingCursedFire);
                 tilesA.Add(TileID.LivingDemonFire);
                 tilesA.Add(TileID.LivingUltrabrightFire);
-                tilesA.Add(TileID.Cobweb);
-                //tilesA.Add(TileID.WoodenBeam);
+                //tilesA.Add(TileID.Cobweb);
             }
 
-            if (!Config.Instance.FullRandom) 
-                foreach (var t in platforms) skipHash.Add(t);
-            skipFraming = skipHash;
+            //Not implemented yet, platforms need styles
+            if (!Config.Instance.FullRandom)
+            {
+                foreach (var t in platforms) 
+                { 
+                    skipHash.Add(t);
+                }
+            }
+
+            
+            if (PreventDungeonAndTempleRandomize)
+            {
+                skipHash.Add(TileID.BlueDungeonBrick);
+                skipHash.Add(TileID.GreenDungeonBrick);
+                skipHash.Add(TileID.PinkDungeonBrick);
+                skipHash.Add(TileID.LihzahrdBrick);
+            }
+
+            if (PreventDungeonAndTempleSpikes)
+            {
+                skipHash.Add(TileID.Spikes);
+                skipHash.Add(TileID.WoodenSpikes);
+            }
+
             //tilesA.AddRange(Pass(Main.tileSolid, skipHash));
             tilesA.AddRange(Pass(Main.tileSolid, skipHash));
 
@@ -223,28 +336,12 @@ namespace ProgressionBlockRandomizer
             tilesA.AddRange(Pass(TileID.Sets.IcesSnow, skipHash));
             tilesA.AddRange(Pass(TileID.Sets.IcesSlush, skipHash));
             tilesA.AddRange(Pass(TileID.Sets.Leaves, skipHash));
-            //tilesA.AddRange(Pass(TileID.Sets.GeneralPlacementTiles, skipHash));
-            tilesA.Add(TileID.Dirt);
-            tilesA.Add(TileID.ClayBlock);
-            tilesA.AddRange(Pass(TileID.Sets.Falling, skipHash));
 
-            //tilesA.AddRange(Pass(TileID.Sets.HellSpecial, skipHash));
-            //tilesA.AddRange(Pass(TileID.Sets.GrassSpecial, skipHash));
-            //tilesA.AddRange(Pass(TileID.Sets.JungleSpecial, skipHash));
+
+            //tilesA.AddRange(Pass(TileID.Sets.GeneralPlacementTiles, skipHash));
 
             tilesA = tilesA.Select(x => x).Distinct().ToList();
-            
 
-            //tilesA.AddRange(Pass(TileID.Sets.NotReallySolid, skipHash));
-
-
-            //tilesA.AddRange(Pass(TileID.Sets.GeneralPlacementTiles, skipHash));
-            //tilesA.AddRange(Pass(Main.tileMoss, skipHash));
-            //tilesA.AddRange(Pass(Main.tileSolid, skipHash));
-            //tilesA.AddRange(Pass(Main.tileMoss, skipHash)); 
-            //tilesA.AddRange(Pass(Main.tileSolidTop, skipHash));
-            //tilesA.AddRange(Pass(Main.tileFlame, skipHash));
-            //tilesA.AddRange(Pass(Main.tileStone, skipHash));
             List<ushort> tilesB = new List<ushort>();
             tilesB.AddRange(tilesA);
 
@@ -256,7 +353,7 @@ namespace ProgressionBlockRandomizer
             //Shuffle Legacy
             for (int i = 0; i < tilesB.Count; i++)
             {
-                int indB = WorldGen.genRand.Next(tilesB.Count);
+                int indB = rand.Next(tilesB.Count);
                 var temp = tilesB[indB];
                 tilesB[indB] = tilesB[i];
                 tilesB[i] = temp;
@@ -374,10 +471,12 @@ namespace ProgressionBlockRandomizer
                 WorldGen.noMapUpdate = true;
                 WorldGen.saveLock = true;
 
+                const int MARGIN = 1;
+
                 //Replace tiles
-                for (int x = 1; x < w - 1; x++)
+                for (int x = MARGIN; x < w - MARGIN; x++)
                 {
-                    for (int y = 1; y < h - 1; y++)
+                    for (int y = MARGIN; y < h - MARGIN; y++)
                     {
                         var tile = Framing.GetTileSafely(x, y);
                         if (tile != null && tile.active() && tile.liquid == 0)
@@ -394,9 +493,9 @@ namespace ProgressionBlockRandomizer
                 }
 
                 //Frame tiles
-                for (int i = 1; i < Main.maxTilesX - 1; i++)
+                for (int i = MARGIN; i < Main.maxTilesX - MARGIN; i++)
                 {
-                    for (int j = 1; j < Main.maxTilesY - 1; j++)
+                    for (int j = MARGIN; j < Main.maxTilesY - MARGIN; j++)
                     {
                         var temp = Framing.GetTileSafely(i, j);
                         if (temp != null && temp.active())
@@ -446,6 +545,12 @@ namespace ProgressionBlockRandomizer
                 {
                     NetMessage.BroadcastChatMessage(NetworkText.FromLiteral("World Randomized"), new Color(50, 255, 130), -1);
                 }
+
+                if (Config.Instance.PrintSeed)
+                {
+                    ShowSeed();
+                }
+
             }
             finally
             {

@@ -34,6 +34,18 @@ namespace ProgressionBlockRandomizer
         [DefaultValue(false)]
         public bool SolidToNonsolid = false;
 
+        [Label("Prevent Dungeon and Temple Randomization")]
+        [DefaultValue(true)]
+        public bool PreventDungeonAndTempleRandomize = true;
+
+        [Label("Prevent Dungeon and Temple Spike Randomization")]
+        [DefaultValue(true)]
+        public bool PreventDungeonAndTempleSpikes = true;
+
+        [Label("Display seed after randomization")]
+        [DefaultValue(true)]
+        public bool PrintSeed = true;
+
         //[Label("Randomize Platforms")]
         //[DefaultValue(false)]
         //public bool Platforms = false;
@@ -53,6 +65,16 @@ namespace ProgressionBlockRandomizer
         public override bool AcceptClientChanges(ModConfig pendingConfig, int whoAmI, ref string message)
         {
             return true;
+        }
+
+        public static string GetSeedBits()
+        {
+            char ToFlag(bool b)
+            {
+                return b ? '1' : '0';
+            }
+
+            return $"{ToFlag(Instance.SolidToNonsolid)}{ToFlag(Instance.PreventDungeonAndTempleRandomize)}{ToFlag(Instance.PreventDungeonAndTempleSpikes)}";
         }
          
     }

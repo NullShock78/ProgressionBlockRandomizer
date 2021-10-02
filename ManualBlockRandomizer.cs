@@ -56,6 +56,12 @@ namespace ProgressionBlockRandomizer
 			recipe2.AddTile(TileID.LunarCraftingStation); 
 			recipe2.SetResult(this); 
 			recipe2.AddRecipe();
+
+			ModRecipe recipe3 = new ModRecipe(mod);
+			recipe3.AddIngredient(ItemID.PlatinumCoin, 20);
+			recipe3.AddTile(TileID.WorkBenches);
+			recipe3.SetResult(this);
+			recipe3.AddRecipe();
 		}
 
 

@@ -1,13 +1,24 @@
 Directly based off of Wand Of Sparking's YouTube series "Randomized Blocks After Each Boss"
-
-Randomizes all solid blocks in the world after defeating a boss for the first time. 
-Includes an endgame manual randomizer item.
-
 Wand Of Sparking:
 https://www.youtube.com/channel/UC83aVV53W2TzlpqGZYFqeZA
 
-Version 0.4.1:
-Now supports multiplayer, may occasionally kick players
+Randomizes all solid blocks in the world after defeating a boss for the first time. 
+Includes an endgame manual randomizer item and commands
 
-Version 0.5:
-Added config for allowing non-solid blocks
+Supports multiplayer, may occasionally kick players
+
+Commands:
+/randworld [optional seed] 
+-Randomizes the world
+-Seed with ":" contains config data, excluding a seed or config info in the seed will use the current config
+Example valid seeds:
+123456:101
+-123456
+2:111
+
+/randseed
+-Displays the last seed used
+
+Version 0.6.0:
+Added config for preventing randomization of the dungeon and temple 
+Added commands and seeds
